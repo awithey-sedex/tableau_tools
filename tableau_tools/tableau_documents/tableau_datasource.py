@@ -358,7 +358,7 @@ class TableauDatasource(TableauDocument):
             new_xml.append(new_l)
             new_xml.append(new_sv)
 
-        xmlstring = etree.tostring(new_xml)
+        xmlstring = etree.tostring(new_xml, encoding='unicode')
         self.end_log_block()
         return xmlstring
 

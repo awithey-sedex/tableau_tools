@@ -53,7 +53,7 @@ class TableauParameters(TableauDocument):
 
     def get_datasource_xml(self):
         self.start_log_block()
-        xmlstring = etree.tostring(self.ds_xml)
+        xmlstring = etree.tostring(self.ds_xml, encoding='utf-8')
         self.end_log_block()
         return xmlstring
 
