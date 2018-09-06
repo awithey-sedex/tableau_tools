@@ -507,9 +507,8 @@ class TableauRestApiConnection(TableauBase):
         else:
             if project_name_or_luid is None:
                 datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]'.format(datasource_name), self.ns_map)
-        else:
-                datasources_with_name = datasources.findall(
-                    u'.//t:datasource[@name="{}"]/t:project[@id="{}"]/..'.format(datasource_name, project_name_or_luid), self.ns_map)
+            else:
+                datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]/t:project[@id="{}"]/..'.format(datasource_name, project_name_or_luid), self.ns_map)
 
         if len(datasources_with_name) == 0:
             self.end_log_block()
@@ -518,9 +517,9 @@ class TableauRestApiConnection(TableauBase):
             else:
                 raise NoMatchFoundException(u"No datasource found with name {} in project {}".format(datasource_name, project_name_or_luid))
         elif len(datasources_with_name) == 1:
-                self.end_log_block()
+            self.end_log_block()
             return datasources_with_name[0].get("id")
-            else:
+        else:
             if project_name_or_luid is None:
                 raise MultipleMatchesFoundException(u'More than one datasource found by name {} without a project specified'.format(datasource_name))
             else:
