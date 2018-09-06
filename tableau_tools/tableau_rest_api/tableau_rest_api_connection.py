@@ -147,9 +147,9 @@ class TableauRestApiConnection(TableauBase):
 
     @staticmethod
     def _urlencode(text):
-        url_text = urllib.parse.quote_plus(text)
+        url_text = urllib.quote_plus(text)
         # Tableau uses commas as a delimter in filters
-        return url_text.replace(',', '%2C')
+        return url_text
 
     #
     # Factory methods for PublishedContent and Permissions objects
