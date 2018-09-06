@@ -145,6 +145,12 @@ class TableauRestApiConnection(TableauBase):
         tsr.append(c)
         return tsr
 
+    @staticmethod
+    def _urlencode(text):
+        url_text = urllib.parse.quote_plus(text)
+        # Tableau uses commas as a delimter in filters
+        return url_text.replace(',', '%2C')
+
     #
     # Factory methods for PublishedContent and Permissions objects
     #
@@ -495,31 +501,32 @@ class TableauRestApiConnection(TableauBase):
         :rtype: unicode
         """
         self.start_log_block()
-        datasources = self.query_datasources()
+        datasources = self.query_resource(u"datasources?filter=name:eq:{}".format(self._urlencode(datasource_name)))
         if content_url is not None:
             datasources_with_name = datasources.findall(u'.//t:datasource[@contentUrl="{}"]'.format(content_url), self.ns_map)
         else:
-            datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]'.format(datasource_name), self.ns_map)
+            if project_name_or_luid is None:
+                datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]'.format(datasource_name), self.ns_map)
+        else:
+                datasources_with_name = datasources.findall(
+                    u'.//t:datasource[@name="{}"]/t:project[@id="{}"]/..'.format(datasource_name, project_name_or_luid), self.ns_map)
+
         if len(datasources_with_name) == 0:
             self.end_log_block()
-            raise NoMatchFoundException(u"No datasource found with name {} in any project".format(datasource_name))
-        elif project_name_or_luid is None:
-            if len(datasources_with_name) == 1:
-                self.end_log_block()
-                return datasources_with_name[0].get(u"id")
-            # If no project is declared, and
+            if project_name_or_luid is None:
+                raise NoMatchFoundException(u"No datasource found with name {} in any project".format(datasource_name))
             else:
-                raise MultipleMatchesFoundException(u'More than one datasource found by name {} without a project specified'.format(datasource_name))
-
-        else:
-            if self.is_luid(project_name_or_luid):
-                ds_in_proj = datasources.findall(u'.//t:project[@id="{}"]/..'.format(project_name_or_luid), self.ns_map)
-            else:
-                ds_in_proj = datasources.findall(u'.//t:project[@name="{}"]/..'.format(project_name_or_luid), self.ns_map)
-            if len(ds_in_proj) == 0:
-                self.end_log_block()
                 raise NoMatchFoundException(u"No datasource found with name {} in project {}".format(datasource_name, project_name_or_luid))
-            return ds_in_proj[0].get(u"id")
+        elif len(datasources_with_name) == 1:
+                self.end_log_block()
+            return datasources_with_name[0].get("id")
+            else:
+            if project_name_or_luid is None:
+                raise MultipleMatchesFoundException(u'More than one datasource found by name {} without a project specified'.format(datasource_name))
+            else:
+                # Not sure how this could ever happen :-)
+                raise MultipleMatchesFoundException(u'More than one datasource found by name {} in project {}'.format(datasource_name, project_name_or_luid))
+
 
     def query_datasource_content_url(self, datasource_name_or_luid, project_name_or_luid=None):
         """
