@@ -504,33 +504,6 @@ class TableauRestApiConnection(TableauBase):
         :rtype: unicode
         """
         self.start_log_block()
-<<<<<<< HEAD:tableau_tools/tableau_rest_api/tableau_rest_api_connection.py
-        datasources = self.query_resource(u"datasources?filter=name:eq:{}".format(self._urlencode(datasource_name)))
-        if content_url is not None:
-            datasources_with_name = datasources.findall(u'.//t:datasource[@contentUrl="{}"]'.format(content_url), self.ns_map)
-        else:
-            if project_name_or_luid is None:
-                datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]'.format(datasource_name), self.ns_map)
-            else:
-                datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]/t:project[@id="{}"]/..'.format(datasource_name, project_name_or_luid), self.ns_map)
-
-        if len(datasources_with_name) == 0:
-            self.end_log_block()
-            if project_name_or_luid is None:
-                raise NoMatchFoundException(u"No datasource found with name {} in any project".format(datasource_name))
-            else:
-                raise NoMatchFoundException(u"No datasource found with name {} in project {}".format(datasource_name, project_name_or_luid))
-        elif len(datasources_with_name) == 1:
-            self.end_log_block()
-            return datasources_with_name[0].get("id")
-        else:
-            if project_name_or_luid is None:
-                raise MultipleMatchesFoundException(u'More than one datasource found by name {} without a project specified'.format(datasource_name))
-            else:
-                # Not sure how this could ever happen :-)
-                raise MultipleMatchesFoundException(u'More than one datasource found by name {} in project {}'.format(datasource_name, project_name_or_luid))
-
-=======
         if project_name_or_luid is not None:
             datasources = self.query_datasources(project_name_or_luid)
         else:
@@ -567,7 +540,6 @@ class TableauRestApiConnection(TableauBase):
 
                 self.end_log_block()
                 raise NoMatchFoundException(u"No datasource found with name {} in project {}".format(datasource_name, project_name_or_luid))
->>>>>>> upstream/4.0.0:tableau_rest_api/tableau_rest_api_connection.py
 
     def query_datasource_content_url(self, datasource_name_or_luid, project_name_or_luid=None):
         """
