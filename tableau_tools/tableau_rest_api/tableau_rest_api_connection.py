@@ -467,11 +467,14 @@ class TableauRestApiConnection(TableauBase):
                 project_luid = project_name_or_luid
             else:
                 project_luid = self.query_project_luid(project_name_or_luid)
-            ds = datasources.findall(u'.//t:project[@id="{}"]/..'.format(project_luid), self.ns_map)
+            dses_in_project = datasources.findall(u'.//t:project[@id="{}"]/..'.format(project_luid), self.ns_map)
+            dses = etree.Element(self.ns_prefix + 'datasources')
+            for ds in dses_in_project:
+                dses.append(ds)
         else:
-            ds = datasources
+            dses = datasources
         self.end_log_block()
-        return ds
+        return dses
 
     # Tries to guess name or LUID, hope there is only one
     def query_datasource(self, ds_name_or_luid, proj_name_or_luid=None):
@@ -501,6 +504,7 @@ class TableauRestApiConnection(TableauBase):
         :rtype: unicode
         """
         self.start_log_block()
+<<<<<<< HEAD:tableau_tools/tableau_rest_api/tableau_rest_api_connection.py
         datasources = self.query_resource(u"datasources?filter=name:eq:{}".format(self._urlencode(datasource_name)))
         if content_url is not None:
             datasources_with_name = datasources.findall(u'.//t:datasource[@contentUrl="{}"]'.format(content_url), self.ns_map)
@@ -526,6 +530,44 @@ class TableauRestApiConnection(TableauBase):
                 # Not sure how this could ever happen :-)
                 raise MultipleMatchesFoundException(u'More than one datasource found by name {} in project {}'.format(datasource_name, project_name_or_luid))
 
+=======
+        if project_name_or_luid is not None:
+            datasources = self.query_datasources(project_name_or_luid)
+        else:
+            datasources = self.query_datasources()
+        # Search for ContentUrl which should be unique, return
+        if content_url is not None:
+            datasources_with_name = datasources.findall(u'.//t:datasource[@contentUrl="{}"]'.format(content_url), self.ns_map)
+            self.end_log_block()
+            if len(datasources_with_name == 1):
+                return datasources_with_name[0].get(u"id")
+            else:
+                raise NoMatchFoundException(u"No datasource found with ContentUrl {}".format(content_url))
+        # If no ContentUrl search, find any with the name
+        else:
+            datasources_with_name = datasources.findall(u'.//t:datasource[@name="{}"]'.format(datasource_name), self.ns_map)
+            # If no match, exception
+            if len(datasources_with_name) == 0:
+                self.end_log_block()
+                raise NoMatchFoundException(u"No datasource found with name {} in any project".format(datasource_name))
+            # If no Project Name is specified, but there is only one match, return, otherwise throw MultipleMatchesException
+            elif project_name_or_luid is None:
+                if len(datasources_with_name) == 1:
+                    self.end_log_block()
+                    return datasources_with_name[0].get(u"id")
+                # If no project is declared, and more than one match
+                else:
+                    raise MultipleMatchesFoundException(u'More than one datasource found by name {} without a project specified'.format(datasource_name))
+            # If Project_name is specified was filtered above, so find the name
+            else:
+                for ds_in_proj in datasources:
+                    if ds_in_proj.get(u"name") == datasource_name:
+                        self.end_log_block()
+                        return ds_in_proj.get(u"id")
+
+                self.end_log_block()
+                raise NoMatchFoundException(u"No datasource found with name {} in project {}".format(datasource_name, project_name_or_luid))
+>>>>>>> upstream/4.0.0:tableau_rest_api/tableau_rest_api_connection.py
 
     def query_datasource_content_url(self, datasource_name_or_luid, project_name_or_luid=None):
         """
@@ -672,7 +714,7 @@ class TableauRestApiConnection(TableauBase):
         :rtype: etree.Element
         """
         self.start_log_block()
-        sites = self.query_resource(u"sites/", server_level=True)
+        sites = self.query_resource(u"sites", server_level=True)
         self.end_log_block()
         return sites
 
@@ -796,7 +838,7 @@ class TableauRestApiConnection(TableauBase):
     #
 
     # This uses the logged in username for convenience by default
-    def query_workbooks(self, username_or_luid=None):
+    def query_workbooks(self, username_or_luid=None, project_name_or_luid=None):
         """
         :type username_or_luid: unicode
         :rtype: etree.Element
@@ -809,15 +851,23 @@ class TableauRestApiConnection(TableauBase):
         else:
             user_luid = self.query_user_luid(username_or_luid)
         wbs = self.query_resource(u"users/{}/workbooks".format(user_luid))
+        if project_name_or_luid is not None:
+            if self.is_luid(project_name_or_luid):
+                project_luid = project_name_or_luid
+            else:
+                project_luid = self.query_project_luid(project_name_or_luid)
+            wbs_in_project = wbs.findall(u'.//t:project[@id="{}"]/..'.format(project_luid), self.ns_map)
+            wbs = etree.Element(self.ns_prefix + 'workbooks')
+            for wb in wbs_in_project:
+                wbs.append(wb)
         self.end_log_block()
         return wbs
 
     # Because a workbook can have the same pretty name in two projects, requires more logic
-    # Maybe reduce down the xpath here into simpler ElementTree iteration, to remove lxml???
-    def query_workbook(self, wb_name_or_luid, p_name_or_luid=None, username_or_luid=None):
+    def query_workbook(self, wb_name_or_luid, proj_name_or_luid=None, username_or_luid=None):
         """
         :type wb_name_or_luid: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :type username_or_luid: unicode
         :rtype: etree.Element
         """
@@ -830,9 +880,9 @@ class TableauRestApiConnection(TableauBase):
         if len(workbooks_with_name) == 0:
             self.end_log_block()
             raise NoMatchFoundException(u"No workbook found for username '{}' named {}".format(username_or_luid, wb_name_or_luid))
-        elif p_name_or_luid is None:
+        elif proj_name_or_luid is None:
             if len(workbooks_with_name) == 1:
-                wb_luid = workbooks_with_name[0].get("id")
+                wb_luid = workbooks_with_name[0].get(u"id")
                 wb = self.query_resource(u"workbooks/{}".format(wb_luid))
                 self.end_log_block()
                 return wb
@@ -840,23 +890,30 @@ class TableauRestApiConnection(TableauBase):
                 self.end_log_block()
                 raise MultipleMatchesFoundException(u'More than one workbook found by name {} without a project specified').format(wb_name_or_luid)
         else:
+<<<<<<< HEAD:tableau_tools/tableau_rest_api/tableau_rest_api_connection.py
             if self.is_luid(p_name_or_luid):
                 wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@id="{}"]/..'.format(wb_name_or_luid, p_name_or_luid), self.ns_map)
             else:
                 wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@name="{}"]/..'.format(wb_name_or_luid, p_name_or_luid), self.ns_map)
+=======
+            if self.is_luid(proj_name_or_luid):
+                wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/:project[@id="{}"]/..'.format(wb_name_or_luid, proj_name_or_luid), self.ns_map)
+            else:
+                wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@name="{}"]/..'.format(wb_name_or_luid, proj_name_or_luid), self.ns_map)
+>>>>>>> upstream/4.0.0:tableau_rest_api/tableau_rest_api_connection.py
             if len(wb_in_proj) == 0:
                 self.end_log_block()
-                raise NoMatchFoundException(u'No workbook found with name {} in project {}').format(wb_name_or_luid, p_name_or_luid)
-            wb_luid = wb_in_proj[0].get("id")
+                raise NoMatchFoundException(u'No workbook found with name {} in project {}'.format(wb_name_or_luid, proj_name_or_luid))
+            wb_luid = wb_in_proj[0].get(u"id")
             wb = self.query_resource(u"workbooks/{}".format(wb_luid))
             self.end_log_block()
             return wb
 
-    def query_workbook_luid(self, wb_name, p_name_or_luid=None, username_or_luid=None):
+    def query_workbook_luid(self, wb_name, proj_name_or_luid=None, username_or_luid=None):
         """
         :type username_or_luid: unicode
         :type wb_name: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :rtype:
         """
         self.start_log_block()
@@ -871,14 +928,14 @@ class TableauRestApiConnection(TableauBase):
             wb_luid = workbooks_with_name[0].get("id")
             self.end_log_block()
             return wb_luid
-        elif len(workbooks_with_name) > 1 and p_name_or_luid is not False:
-            if self.is_luid(p_name_or_luid):
-                wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@id="{}"]/..'.format(wb_name, p_name_or_luid), self.ns_map)
+        elif len(workbooks_with_name) > 1 and proj_name_or_luid is not False:
+            if self.is_luid(proj_name_or_luid):
+                wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@id="{}"]/..'.format(wb_name, proj_name_or_luid), self.ns_map)
             else:
-                wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@name="{}"]/..'.format(wb_name, p_name_or_luid), self.ns_map)
+                wb_in_proj = workbooks.findall(u'.//t:workbook[@name="{}"]/t:project[@name="{}"]/..'.format(wb_name, proj_name_or_luid), self.ns_map)
             if len(wb_in_proj) == 0:
                 self.end_log_block()
-                raise NoMatchFoundException(u'No workbook found with name {} in project {}').format(wb_name, p_name_or_luid)
+                raise NoMatchFoundException(u'No workbook found with name {} in project {}').format(wb_name, proj_name_or_luid)
             wb_luid = wb_in_proj[0].get("id")
             self.end_log_block()
             return wb_luid
@@ -901,13 +958,16 @@ class TableauRestApiConnection(TableauBase):
         workbooks = self.query_workbooks(user_luid)
         # This brings back the workbook itself
         wbs_in_project = workbooks.findall(u'.//t:project[@id="{}"]/..'.format(project_luid), self.ns_map)
+        wbs = etree.Element(self.ns_prefix + 'workbooks')
+        for wb in wbs_in_project:
+            wbs.append(wb)
         self.end_log_block()
-        return wbs_in_project
+        return wbs
 
-    def query_workbook_views(self, wb_name_or_luid, p_name_or_luid=None, username_or_luid=None, usage=False):
+    def query_workbook_views(self, wb_name_or_luid, proj_name_or_luid=None, username_or_luid=None, usage=False):
         """
         :type wb_name_or_luid: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :type username_or_luid: unicode
         :type usage: bool
         :rtype: etree.Element
@@ -918,16 +978,16 @@ class TableauRestApiConnection(TableauBase):
         if self.is_luid(wb_name_or_luid):
             wb_luid = wb_name_or_luid
         else:
-            wb_luid = self.query_workbook_luid(wb_name_or_luid, p_name_or_luid, username_or_luid)
+            wb_luid = self.query_workbook_luid(wb_name_or_luid, proj_name_or_luid, username_or_luid)
         vws = self.query_resource(u"workbooks/{}/views?includeUsageStatistics={}".format(wb_luid, str(usage).lower()))
         self.end_log_block()
         return vws
 
-    def query_workbook_view(self, wb_name_or_luid, view_name_or_luid=None, view_content_url=None, p_name_or_luid=None, username_or_luid=None,
+    def query_workbook_view(self, wb_name_or_luid, view_name_or_luid=None, view_content_url=None, proj_name_or_luid=None, username_or_luid=None,
                             usage=False):
         """
         :type wb_name_or_luid: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :type username_or_luid: unicode
         :type view_name_or_luid: unicode
         :type view_content_url: unicode
@@ -940,7 +1000,7 @@ class TableauRestApiConnection(TableauBase):
         if self.is_luid(wb_name_or_luid):
             wb_luid = wb_name_or_luid
         else:
-            wb_luid = self.query_workbook_luid(wb_name_or_luid, p_name_or_luid, username_or_luid)
+            wb_luid = self.query_workbook_luid(wb_name_or_luid, proj_name_or_luid, username_or_luid)
         vws = self.query_resource(u"workbooks/{}/views?includeUsageStatistics={}".format(wb_luid, str(usage).lower()))
         if view_content_url is not None:
             views_with_name = vws.findall(u'.//t:view[@contentUrl="{}"]'.format(view_content_url), self.ns_map)
@@ -958,11 +1018,11 @@ class TableauRestApiConnection(TableauBase):
         self.end_log_block()
         return views_with_name
 
-    def query_workbook_view_luid(self, wb_name_or_luid, view_name=None, view_content_url=None, p_name_or_luid=None,
+    def query_workbook_view_luid(self, wb_name_or_luid, view_name=None, view_content_url=None, proj_name_or_luid=None,
                                  username_or_luid=None, usage=False):
         """
         :type wb_name_or_luid: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :type username_or_luid: unicode
         :type view_name: unicode
         :type view_content_url: unicode
@@ -975,7 +1035,7 @@ class TableauRestApiConnection(TableauBase):
         if self.is_luid(wb_name_or_luid):
             wb_luid = wb_name_or_luid
         else:
-            wb_luid = self.query_workbook_luid(wb_name_or_luid, p_name_or_luid, username_or_luid)
+            wb_luid = self.query_workbook_luid(wb_name_or_luid, proj_name_or_luid, username_or_luid)
         vws = self.query_resource(u"workbooks/{}/views?includeUsageStatistics={}".format(wb_luid, str(usage).lower()))
         if view_content_url is not None:
             views_with_name = vws.findall(u'.//t:view[@contentUrl="{}"]'.format(view_content_url), self.ns_map)
@@ -994,12 +1054,12 @@ class TableauRestApiConnection(TableauBase):
 
         # This should be the key to updating the connections in a workbook. Seems to return
     # LUIDs for connections and the datatypes, but no way to distinguish them
-    def query_workbook_connections(self, wb_name_or_luid, p_name_or_luid=None, username_or_luid=None):
+    def query_workbook_connections(self, wb_name_or_luid, proj_name_or_luid=None, username_or_luid=None):
         self.start_log_block()
         if self.is_luid(wb_name_or_luid):
             wb_luid = wb_name_or_luid
         else:
-            wb_luid = self.query_workbook_luid(wb_name_or_luid, p_name_or_luid, username_or_luid)
+            wb_luid = self.query_workbook_luid(wb_name_or_luid, proj_name_or_luid, username_or_luid)
         conns = self.query_resource(u"workbooks/{}/connections".format(wb_luid))
         self.end_log_block()
         return conns
@@ -1045,7 +1105,7 @@ class TableauRestApiConnection(TableauBase):
             view_luid = view_name_or_luid
         else:
             view_luid = self.query_workbook_view_luid(wb_name_or_luid, view_name=view_name_or_luid,
-                                                      p_name_or_luid=proj_name_or_luid)
+                                                      proj_name_or_luid=proj_name_or_luid)
         try:
             if filename_no_extension.find('.png') == -1:
                 filename_no_extension += '.png'
@@ -1456,19 +1516,19 @@ class TableauRestApiConnection(TableauBase):
         self.end_log_block()
         return tag_response
 
-    def add_workbook_to_user_favorites(self, favorite_name, wb_name_or_luid, username_or_luid, p_name_or_luid=None):
+    def add_workbook_to_user_favorites(self, favorite_name, wb_name_or_luid, username_or_luid, proj_name_or_luid=None):
         """
         :type favorite_name: unicode
         :type wb_name_or_luid: unicode
         :type username_or_luid: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :rtype: etree.Element
         """
         self.start_log_block()
         if self.is_luid(wb_name_or_luid):
             wb_luid = wb_name_or_luid
         else:
-            wb_luid = self.query_workbook_luid(wb_name_or_luid, p_name_or_luid, username_or_luid)
+            wb_luid = self.query_workbook_luid(wb_name_or_luid, proj_name_or_luid, username_or_luid)
 
         if self.is_luid(username_or_luid):
             user_luid = username_or_luid
@@ -1489,14 +1549,14 @@ class TableauRestApiConnection(TableauBase):
         return update_response
 
     def add_view_to_user_favorites(self, favorite_name, username_or_luid, view_name_or_luid=None, view_content_url=None,
-                                   wb_name_or_luid=None, p_name_or_luid=None):
+                                   wb_name_or_luid=None, proj_name_or_luid=None):
         """
         :type favorite_name: unicode
         :type username_or_luid: unicode
         :type view_name_or_luid: unicode
         :type view_content_url: unicode
         :type wb_name_or_luid: unicode
-        :type p_name_or_luid: unicode
+        :type proj_name_or_luid: unicode
         :rtype: etree.Element
         """
         self.start_log_block()
@@ -1506,7 +1566,7 @@ class TableauRestApiConnection(TableauBase):
             if wb_name_or_luid is None:
                 raise InvalidOptionException(u'When passing a View Name instead of LUID, must also specify workbook name or luid')
             view_luid = self.query_workbook_view_luid(wb_name_or_luid, view_name_or_luid, view_content_url,
-                                                      p_name_or_luid, username_or_luid)
+                                                      proj_name_or_luid, username_or_luid)
             self.log(u'View luid found {}'.format(view_luid))
 
         if self.is_luid(username_or_luid):

@@ -668,11 +668,12 @@ The most efficient algorithm for sending an update is thus:
 
 `tableau_rest_api` handles this through two concepts -- the `Permissions` object that represents the permissions / capabilities, and the `PublishedContent` classes, which represent the objects on the server that have permissions.
 
-#### 1.4.1 PublishedContent Classes (Project20/Project21, Workbook, Datasource)
+#### 1.4.1 PublishedContent Classes (Project20/Project21, Workbook, Datasource, View)
 There are three classes that represent the state of published content to a server; they all descend from the PublishedContent class, but there is no reason to ever access `PublishedContent` directly. Each of these require passing in an active and signed-in `TableauRestApiConnection` object so that they can perform actions against the Tableau Server.
 
-Project obviously represents a project. In API Verison 2.1, a Project also contains a child `Workbook` and `Datasource` object that represent the Default Permissions that can be set for that project. In API Version 2.0, the project simply has a full set of capabilities that include those that apply to a workbook or a datasource. This reflects the difference in Tableau Server itself. If you are still on 9.1 or before, make sure to set your `tableau_server_version` argument so that the `Project` class behaves correctly.
+Project obviously represents a project. In API Version 2.1, a Project also contains a child `Workbook` and `Datasource` object that represent the Default Permissions that can be set for that project. In API Version 2.0, the project simply has a full set of capabilities that include those that apply to a workbook or a datasource. This reflects the difference in Tableau Server itself. If you are still on 9.1 or before, make sure to set your `tableau_server_version` argument so that the `Project` class behaves correctly.
 
+Starting in API 3.2 (2018.3+), there is a View object which represents published Views that were not published as Tabs. Since views have the same permissions as workbooks, use the WorkbookPermissions objects just like with the Workbook object.
 `TableauRestApiConnection.get_published_datasource_object(datasource_name_or_luid, project_name_or_luid)`
 
 `TableauRestApiConnection.get_published_workbook_object(workbook_name_or_luid, project_name_or_luid)`
@@ -1028,6 +1029,8 @@ ex.
 
 As mentioned, this requires have super access to the Tableau repository, including its password, which could be dangerous. If you can at all, update to Tableau 10.5+ and use the REST API methods from above.
 
+### 1.7 Data Driven Alerts (2018.3+)
+Starting in API 3.2 (2018.3+), you can manage Data Driven Alerts via the APIs. The methods for this functionality follows the exact naming pattern of the REST API Reference.
     
 ## 2 tableau_documents: Modifying Tableau Documents (for Template Publishing)
 tableau_documents implements some features that go beyond the Tableau REST API, but are extremely useful when dealing with a large number of workbooks or datasources, particularly for multi-tenented Sites. These methods actually allow unsupported changes to the Tableau workbook or datasource XML. If something breaks with them, blame the author of the library and not Tableau Support, who won't help you with them.
@@ -1120,6 +1123,32 @@ ex.
     
     ds_version takes either u'9' or u'10, because it is more on basic structure and the individual point numbers don't matter.
 
+#### 2.5.6 TableauColumns Class
+A TableauDatasource will have a set of column tags, which define the visible aliases that the end user sees and how those map to the actual columns in the overall datasource. Calculations are also defined as a column, with an additional calculation tag within. These tags to do not have any sort of columns tag that contains them; they are simply appended near the end of the datasources node, after all the connections node section.
+
+The TableauColumns class encapsulates the column tags as if they were contained in a collection. The TableauDatasource object automatically creates a TableauColumns object at instantiation, which can be accessed through the `TableauDatasource.columns` property. 
+
+Columns can have an alias, which is conveniently represented by the `caption` attribute. They also have a `name` attribute which maps to the actual name of the column in the datasource itself. For this reason, the methods that deal with "Column Names" tend to search through both the name and the caption attributes.
+
+The primary use case for adjusting column tags is to change the aliases for translation. To achieve this, there is a method designed to take in a dictionary of names to search and replace: 
+
+`TableauColumns.translate_captions(translation_dict)`
+
+The dictionary should be a simple mapping of the caption from the template to the caption you want in the final translated version. Some customers have tokenized the captions to make it obvious which is the template:
+
+    english_dict = { '{token1}': 'category', '{token2}': 'sub-category'}
+    german_dict = { '{token1}': 'Kategorie', '{token2}': 'Unterkategorie'}
+    tab_file = TableauFile('template_file.tds')
+    dses = tab_file.tableau_document.datasources  #type: list[TableauDatasource]
+    for ds in dses:
+        ds.columns.translate_captions(english_dict)
+    new_eng_filename = tab_file.save_new_file(u'English Version')
+    # Reload template again
+    tab_file = TableauFile('template_file.tds')
+    dses = tab_file.tableau_document.datasources  #type: list[TableauDatasource]
+    for ds in dses:
+        ds.columns.translate_captions(german_dict)
+    new_ger_filename = tab_file.save_new_file(u'German Version')
 
 ### 2.6 TableauConnection Class
 In a u'9' version `TableauDatasource`, there is only `connections[0]` because there was only one connection. A u'10' version can have any number of federated connections in this array. If you are creating connections from scratch, I highly recommend doing single connections. There hasn't been any work to make sure federated connections work correctly with modifications.
@@ -1154,7 +1183,7 @@ ex.
     dses = twb.tableau_document.datasources
     for ds in dses:
         if ds.published is not True:  # See next section on why you should check for published datasources
-            ds.update_tables_with_new_database_or_schema(u'test_db, u'production_db')  # For systems where db/schema is referenced in the table identifier
+            ds.update_tables_with_new_database_or_schema(u'test_db', u'production_db')  # For systems where db/schema is referenced in the table identifier
             for conn in ds.connections:
                 if conn.dbname == u'test_db':
                     conn.dbname = u'production_db'
@@ -1544,7 +1573,7 @@ The tableau_repository.py file in the main section of the tableau_tools library 
 ### 4.1 TableauRepository Class
 You initiate a `TableauRepository` object using:
 
-`TableauRepostiory(tableau_server_url, repository_password, repository_username='readonly')`
+`TableauRepository(tableau_server_url, repository_password, repository_username='readonly')`
 
 `"repository_username"` can also be "tableau" (although "readonly" has higher access) or `"tblwgadmin"` if you need to make updates or have access to hidden tables. It is highly suggested you only ever sign-in with tblwgadmin for the minimal amount of commands you need to send from that privledged user, then close that connection and reconnect as readonly.
 
@@ -1599,8 +1628,7 @@ Ex.
     t_rep = TableauRepository(server, repository_password=rep_pw)
     sessions_for_username = t_rep.query_sessions(username=u'some_username')
     for row in sessions_for_username:
-        t.token = row[0]
-        t.signout()
+        t.signout(row[0])
 
 ### 4.4 Setting Datasources and Workbooks on Extract Refresh Schedules (pre 10.5)
 This is extra extra not supported and should only be used in an emergency with a clean backup and great recovery plan in place. If you can update to 10.5 to use the appropriate REST API commands, you should. But if for some reason you can't, if you have logged in via the tblwgadmin user, you can put a workbook or datasource on an extract refresh schedule:
