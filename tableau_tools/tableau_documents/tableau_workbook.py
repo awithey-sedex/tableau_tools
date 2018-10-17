@@ -6,7 +6,7 @@ from tableau_parameters import TableauParameters
 from tableau_document import TableauDocument
 import os
 import codecs
-
+import xml.etree.cElementTree as etree
 
 class TableauWorkbook(TableauDocument):
     def __init__(self, twb_filename, logger_obj=None):
@@ -16,6 +16,7 @@ class TableauWorkbook(TableauDocument):
         self.logger = logger_obj
         self.log(u'Initializing a TableauWorkbook object')
         self.twb_filename = twb_filename
+        self.workbook_xml = None
         # Check the filename
         if self.twb_filename.find('.twb') == -1:
             raise InvalidOptionException(u'Must input a .twb filename that exists')
@@ -26,37 +27,37 @@ class TableauWorkbook(TableauDocument):
 #            self.enable_logging(self.logger)
 
     def build_document_objects(self, filename):
-        wb_fh = codecs.open(filename, 'r', encoding='utf-8')
-        ds_fh = codecs.open(u'temp_ds.txt', 'w', encoding='utf-8')
+        # Don't decode utf-8 as elementree will do it's own decode ...
+        wb_fh = codecs.open(filename, 'r')
+
+        datasource_content = []
+        file_content = wb_fh.readlines()
+        wb_fh.close()
 
         # Stream through the file, only pulling the datasources section
         ds_flag = None
         # Skip all the metadata
         metadata_flag = None
-        for line in wb_fh:
-            # Grab the datasources
-
+        # Grab the datasources
+        for line in file_content:
             if line.find(u"<metadata-records") != -1 and metadata_flag is None:
                 metadata_flag = True
             if ds_flag is True and metadata_flag is not True:
-                ds_fh.write(line)
+                datasource_content.append(line)
             if line.find(u"<datasources") != -1 and ds_flag is None:
                 ds_flag = True
-                ds_fh.write("<datasources xmlns:user='http://www.tableausoftware.com/xml/user'>\n")
+                datasource_content.append("<datasources xmlns:user='http://www.tableausoftware.com/xml/user'>\n")
             if line.find(u"</metadata-records") != -1 and metadata_flag is True:
                 metadata_flag = False
 
             if line.find(u"</datasources>") != -1 and ds_flag is True:
-                ds_fh.close()
                 break
-        wb_fh.close()
 
-        utf8_parser = etree.XMLParser(encoding='utf-8')
-        ds_xml = etree.parse(u'temp_ds.txt', parser=utf8_parser)
-        os.remove(u'temp_ds.txt')
+        ds_xml = etree.fromstringlist(datasource_content)
+        self.workbook_xml = etree.fromstringlist(file_content)
 
         self.log(u"Building TableauDatasource objects")
-        datasource_elements = ds_xml.getroot().findall(u'datasource')
+        datasource_elements = ds_xml.findall(u'datasource')
         if datasource_elements is None:
             raise InvalidOptionException(u'Error with the datasources from the workbook')
         for datasource in datasource_elements:
@@ -86,7 +87,6 @@ class TableauWorkbook(TableauDocument):
         """
         self.start_log_block()
         try:
-            orig_wb = codecs.open(self.twb_filename, 'r', encoding='utf-8')
             if filename_no_extension.find('.twb') == -1:
                 filename_no_extension += '.twb'
             self.log(u'Saving to {}'.format(filename_no_extension))
@@ -94,7 +94,9 @@ class TableauWorkbook(TableauDocument):
             # Stream through the file, only pulling the datasources section
             ds_flag = None
 
-            for line in orig_wb:
+            xml_string = etree.tostring(self.workbook_xml)
+
+            for line in xml_string.splitlines():
                 # Skip the lines of the original datasource and sub in the new one
                 if line.find("<datasources") != -1 and ds_flag is None:
                     self.log(u'Found the first of the datasources section')
