@@ -2161,11 +2161,9 @@ class TableauRestApiConnection(TableauBase):
 
                         content_file.close()
                         if temp_wb_filename is not None:
-                            # os.remove(temp_wb_filename)
-                            self.log(u"TODO: remove file: {}".format(temp_wb_filename))
+                            os.remove(temp_wb_filename)
                         if cleanup_temp_file is True:
-                            # os.remove(final_filename)
-                            self.log(u"TODO: remove file: {}".format(final_filename))
+                            os.remove(final_filename)
                         return self.send_publish_request(url, None, publish_request, boundary_string)
                     # Break up into chunks for upload
                     else:
