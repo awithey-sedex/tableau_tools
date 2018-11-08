@@ -11,6 +11,7 @@ class TableauDocument(TableauBase):
         self._datasources = []
         self._document_type = None
         self.parameters = None
+        self.xml = None
 
     @property
     def datasources(self):

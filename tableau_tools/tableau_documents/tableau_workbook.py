@@ -16,7 +16,7 @@ class TableauWorkbook(TableauDocument):
         self.logger = logger_obj
         self.log(u'Initializing a TableauWorkbook object')
         self.twb_filename = twb_filename
-        self.workbook_xml = None
+        self.xml = None
         # Check the filename
         if self.twb_filename.find('.twb') == -1:
             raise InvalidOptionException(u'Must input a .twb filename that exists')
@@ -25,10 +25,10 @@ class TableauWorkbook(TableauDocument):
     def build_document_objects(self, filename):
         utf8_parser = etree.XMLParser(encoding='utf-8')
         with codecs.open(filename, "rb") as file_handle:
-            self.workbook_xml = etree.parse(file_handle).getroot()
+            self.xml = etree.parse(file_handle).getroot()
 
         self.log(u"Building TableauDatasource objects")
-        ds_xml = self.workbook_xml.find('./datasources')
+        ds_xml = self.xml.find('./datasources')
         datasource_elements = ds_xml.findall(u'datasource')
         if datasource_elements is None:
             raise InvalidOptionException(u'Error with the datasources from the workbook')
@@ -63,7 +63,7 @@ class TableauWorkbook(TableauDocument):
                 filename_no_extension += '.twb'
             self.log(u'Saving to {}'.format(filename_no_extension))
             with codecs.open(filename_no_extension, 'wb') as file_handle:
-                etree.ElementTree(self.workbook_xml).write(file_handle, encoding='utf-8', xml_declaration=True)
+                etree.ElementTree(self.xml).write(file_handle, encoding='utf-8', xml_declaration=True)
 
             self.end_log_block()
             return True
