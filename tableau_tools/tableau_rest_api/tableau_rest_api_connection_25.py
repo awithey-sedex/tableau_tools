@@ -209,7 +209,7 @@ class TableauRestApiConnection25(TableauRestApiConnection24):
                 elements = elements.findall(u'.//t:{}[@id="{}"]'.format(element_name, luid), self.ns_map)
             else:
                 encoded_name = element_name.replace('&', '%26')
-                elements = self.query_resource(u"{}s?filter=name:eq:{}&fields=_all_".format(encoded_name, name_or_luid))
+                elements = self.query_resource(u"{}s?filter=name:eq:{}&fields=_all_".format(encoded_name, name_or_luid.replace('&', '%26')))
         self.end_log_block()
         return elements
 
@@ -238,11 +238,11 @@ class TableauRestApiConnection25(TableauRestApiConnection24):
         :rtype: unicode
         """
         self.start_log_block()
-        encoded_name = element_name.replace('&', '%26')
+        encoded_name = name.replace('&', '%26')
         if optimize_with_field is True:
-            elements = self.query_resource(u"{}s?filter=name:eq:{}&fields=id".format(encoded_name, name))
+            elements = self.query_resource(u"{}s?filter=name:eq:{}&fields=id".format(element_name, encoded_name))
         else:
-            elements = self.query_resource(u"{}s?filter=name:eq:{}".format(encoded_name, name))
+            elements = self.query_resource(u"{}s?filter=name:eq:{}".format(element_name, encoded_name))
         if len(elements) == 1:
             self.end_log_block()
             return elements[0].get(u"id")
