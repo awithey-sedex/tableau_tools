@@ -111,15 +111,19 @@ class TableauRestApiConnection30(TableauRestApiConnection28):
         self.end_log_block()
         return response
 
-    def publish_workbook(self, workbook_filename, workbook_name, project_obj, overwrite=False, async_publish=False, connection_username=None,
-                         connection_password=None, save_credentials=True, show_tabs=True, check_published_ds=True):
+    def publish_workbook(self, workbook_filename, workbook_name, project_obj, overwrite=False, async_publish=False,
+                         connection_credentials=None, save_credentials=True, show_tabs=True, check_published_ds=True):
         """
         :type workbook_filename: unicode
         :type workbook_name: unicode
         :type project_obj: Project20 or Project21
         :type overwrite: bool
-        :type connection_username: unicode
-        :type connection_password: unicode
+        :type connection_credentials: list(
+            :type connection_host: unicode,
+            :type connection_port: unicode
+            :type connection_username: unicode,
+            :type connection_password: unicode
+            )
         :type save_credentials: bool
         :type show_tabs: bool
         :param check_published_ds: Set to False to improve publish speed if you KNOW there are no published data sources
@@ -129,8 +133,8 @@ class TableauRestApiConnection30(TableauRestApiConnection28):
 
         project_luid = project_obj.luid
         xml = self.publish_content(u'workbook', workbook_filename, workbook_name, project_luid,
-                                   {u"overwrite": overwrite, u"asJob": async_publish}, connection_username,
-                                   connection_password, save_credentials, show_tabs=show_tabs,
+                                   {u"overwrite": overwrite, u"asJob": async_publish}, connection_credentials,
+                                   save_credentials, show_tabs=show_tabs,
                                    check_published_ds=check_published_ds)
         if async_publish is True:
             job = xml.findall(u'.//t:job', self.ns_map)
