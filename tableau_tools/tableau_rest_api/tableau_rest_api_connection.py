@@ -2148,7 +2148,8 @@ class TableauRestApiConnection(TableauBase):
                     publish_request_xml.append(t1)
 
                     encoded_request = etree.tostring(publish_request_xml, encoding='utf-8')
-
+                    self.log("Encoded request:")
+                    self.log(encoded_request)
                     publish_request += bytes(encoded_request)
                     publish_request += bytes("\r\n--{}".format(boundary_string).encode('utf-8'))
 
