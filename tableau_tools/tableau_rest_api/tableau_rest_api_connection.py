@@ -2123,7 +2123,7 @@ class TableauRestApiConnection(TableauBase):
                             for cred in connection_credentials:
                                 c = etree.Element(u'connection')
                                 c.set(u'serverAddress', cred[0])
-                                c.set(u'serverPort', cred[1])
+                                c.set(u'serverPort', str(cred[1]))
 
                                 cc = etree.Element(u'connectionCredentials')
                                 cc.set(u'name', cred[2])
