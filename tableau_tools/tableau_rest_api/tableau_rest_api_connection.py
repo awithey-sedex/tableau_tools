@@ -2118,24 +2118,7 @@ class TableauRestApiConnection(TableauBase):
                         t1.set(u'showTabs', str(show_tabs).lower())
 
                     if connection_credentials is not None and len(connection_credentials) > 0:
-                        if file_extension.lower() in [u'twb', u'twbx']:
-                            c1 = etree.Element(u'connections')
-                            for cred in connection_credentials:
-                                c = etree.Element(u'connection')
-                                c.set(u'serverAddress', cred[0])
-                                c.set(u'serverPort', str(cred[1]))
-
-                                cc = etree.Element(u'connectionCredentials')
-                                cc.set(u'name', cred[2])
-                                cc.set(u'password', cred[3])
-                                cc.set(u'embed', str(save_credentials).lower())
-
-                                c.append(cc)
-                                c1.append(c)
-                            t1.append(c1)
-                        else:
-                            cred = connection_credentials[0]
-                            # Datasources can only have one connectio
+                        for cred in connection_credentials:
                             cc = etree.Element(u'connectionCredentials')
                             cc.set(u'name', cred[2])
                             cc.set(u'password', cred[3])
