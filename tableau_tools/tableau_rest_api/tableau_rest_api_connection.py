@@ -2137,8 +2137,8 @@ class TableauRestApiConnection(TableauBase):
                             cred = connection_credentials[0]
                             # Datasources can only have one connectio
                             cc = etree.Element(u'connectionCredentials')
-                            cc.set(u'name', connection_credentials[0][2])
-                            cc.set(u'password', connection_credentials[0][3])
+                            cc.set(u'name', cred[2])
+                            cc.set(u'password', cred[3])
                             cc.set(u'embed', str(save_credentials).lower())
                             t1.append(cc)
 
