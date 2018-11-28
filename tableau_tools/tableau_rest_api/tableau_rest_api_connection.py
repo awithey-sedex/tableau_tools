@@ -2010,15 +2010,19 @@ class TableauRestApiConnection(TableauBase):
         (1) Initiate File Upload (2) Append to File Upload (3) Publish workbook to commit (over 64 MB)
     '''
 
-    def publish_workbook(self, workbook_filename, workbook_name, project_obj, overwrite=False, connection_username=None,
-                         connection_password=None, save_credentials=True, show_tabs=True, check_published_ds=True):
+    def publish_workbook(self, workbook_filename, workbook_name, project_obj, overwrite=False,
+                         connection_credentials=None, save_credentials=True, show_tabs=True, check_published_ds=True):
         """
         :type workbook_filename: unicode
         :type workbook_name: unicode
         :type project_obj: Project20 or Project21
         :type overwrite: bool
-        :type connection_username: unicode
-        :type connection_password: unicode
+        :type connection_credentials: list(
+            :type connection_host: unicode,
+            :type connection_port: unicode
+            :type connection_username: unicode,
+            :type connection_password: unicode
+            )
         :type save_credentials: bool
         :type show_tabs: bool
         :param check_published_ds: Set to False to improve publish speed if you KNOW there are no published data sources
@@ -2028,7 +2032,7 @@ class TableauRestApiConnection(TableauBase):
 
         project_luid = project_obj.luid
         xml = self.publish_content(u'workbook', workbook_filename, workbook_name, project_luid,
-                                   {u"overwrite": overwrite}, connection_username, connection_password,
+                                   {u"overwrite": overwrite}, connection_credentials,
                                    save_credentials, show_tabs=show_tabs, check_published_ds=check_published_ds)
         workbook = xml.findall(u'.//t:workbook', self.ns_map)
         return workbook[0].get('id')
@@ -2040,21 +2044,22 @@ class TableauRestApiConnection(TableauBase):
         :type ds_name: unicode
         :type project_obj: Project20 or Project21
         :type overwrite: bool
-        :type connection_username: unicode
+        :type connection_username: unicode,
         :type connection_password: unicode
         :type save_credentials: bool
         :rtype: unicode
         """
         project_luid = project_obj.luid
+        connection_credentials=[(None, None, connection_username, connection_password)]
         xml = self.publish_content(u'datasource', ds_filename, ds_name, project_luid, {u"overwrite": overwrite},
-                                   connection_username, connection_password, save_credentials)
+                                   connection_credentials, save_credentials)
         datasource = xml.findall(u'.//t:datasource', self.ns_map)
         return datasource[0].get('id')
 
     # Main method for publishing a workbook. Should intelligently decide to chunk up if necessary
     # If a TableauDatasource or TableauWorkbook is passed, will upload from its content
     def publish_content(self, content_type, content_filename, content_name, project_luid, url_params=None,
-                        connection_username=None, connection_password=None, save_credentials=True, show_tabs=False,
+                        connection_credentials=None, save_credentials=True, show_tabs=False,
                         check_published_ds=True):
         # Single upload limit in MB
         single_upload_limit = 20
@@ -2112,12 +2117,29 @@ class TableauRestApiConnection(TableauBase):
                     if show_tabs is not False:
                         t1.set(u'showTabs', str(show_tabs).lower())
 
-                    if connection_username is not None and connection_password is not None:
-                        cc = etree.Element(u'connectionCredentials')
-                        cc.set(u'name', connection_username)
-                        cc.set(u'password', connection_password)
-                        cc.set(u'embed', str(save_credentials).lower())
-                        t1.append(cc)
+                    if connection_credentials is not None and len(connection_credentials) > 0:
+                        if len(connection_credentials) > 1:
+                            c1 = etree.Element(u'connections')
+                            for cred in connection_credentials:
+                                c = etree.Element(u'connection')
+                                c.set(u'serverAddress', cred[0])
+                                c.set(u'serverPort', str(cred[1]))
+
+                                cc = etree.Element(u'connectionCredentials')
+                                cc.set(u'name', cred[2])
+                                cc.set(u'password', cred[3])
+                                cc.set(u'embed', str(save_credentials).lower())
+
+                                c.append(cc)
+                                c1.append(c)
+                            t1.append(c1)
+                        else:
+                            cred = connection_credentials[0]
+                            cc = etree.Element(u'connectionCredentials')
+                            cc.set(u'name', cred[2])
+                            cc.set(u'password', cred[3])
+                            cc.set(u'embed', str(save_credentials).lower())
+                            t1.append(cc)
 
                     p = etree.Element(u'project')
                     p.set(u'id', project_luid)
@@ -2125,7 +2147,8 @@ class TableauRestApiConnection(TableauBase):
                     publish_request_xml.append(t1)
 
                     encoded_request = etree.tostring(publish_request_xml, encoding='utf-8')
-
+                    self.log("Encoded request:")
+                    self.log(encoded_request)
                     publish_request += bytes(encoded_request)
                     publish_request += bytes("\r\n--{}".format(boundary_string).encode('utf-8'))
 
