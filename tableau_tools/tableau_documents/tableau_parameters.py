@@ -9,7 +9,6 @@ import datetime
 import collections
 import re
 
-
 class TableauParameters(TableauDocument):
     def __init__(self, datasource_xml=None, logger_obj=None):
         """
@@ -38,15 +37,15 @@ class TableauParameters(TableauDocument):
             self.log(u'Parameter XML passed in, finding essential characteristics')
             self.ds_xml = datasource_xml
             params_xml = self.ds_xml.findall(u'./column')
-            numberedParameterRegex = re.compile('\[Parameter (\d+)\]')
+            numbered_parameter_regex = re.compile(u"\[Parameter (\d+)\]")
             for column in params_xml:
                 alias = column.get(u'caption')
                 internal_name = column.get(u'name')  # type: unicode
                 # Parameters are all given internal name [Parameter #], unless they are copies where they
                 # end with (copy) h/t Jeff James for discovering
-                regexMatch = numberedParameterRegex.match(internal_name)
-                if regexMatch and regexMatch.group(1):
-                    param_num = int(regexMatch.group(1))
+                regex_match = numbered_parameter_regex.match(internal_name)
+                if regex_match and regex_match.group(1):
+                    param_num = int(regex_match.group(1))
                     # Move up the highest_param_num counter for when you add new ones
                     if param_num > self._highest_param_num:
                         self._highest_param_num = param_num
