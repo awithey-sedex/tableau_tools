@@ -10,6 +10,7 @@ from ..tableau_exceptions import *
 from rest_xml_request import RestXmlRequest
 from published_content import Project20, Project21, Project28, Workbook, Datasource
 import copy
+import urllib
 
 
 class TableauRestApiConnection(TableauBase):

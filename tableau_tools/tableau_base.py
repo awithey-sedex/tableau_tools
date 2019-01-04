@@ -21,6 +21,7 @@ class TableauBase(object):
         self.ns_map = {'t': 'http://tableau.com/api'}
         self.ns_prefix = '{' + self.ns_map['t'] + '}'
         etree.register_namespace(u't', self.ns_map['t'])
+        etree.register_namespace("user", "http://www.tableausoftware.com/xml/user")
 
         self.site_roles = (
             u'Interactor',
