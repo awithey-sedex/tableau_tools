@@ -18,9 +18,11 @@ class TableauBase(object):
         self.version = u"10.5"
         self.api_version = u"2.8"
         self.tableau_namespace = u'http://tableau.com/api'
+        # Add namespace used by API
         self.ns_map = {'t': 'http://tableau.com/api'}
         self.ns_prefix = '{' + self.ns_map['t'] + '}'
         etree.register_namespace(u't', self.ns_map['t'])
+        # Add namespace used when saving xml for twb
         etree.register_namespace("user", "http://www.tableausoftware.com/xml/user")
 
         self.site_roles = (

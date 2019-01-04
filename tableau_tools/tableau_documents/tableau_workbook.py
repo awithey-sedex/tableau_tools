@@ -16,6 +16,7 @@ class TableauWorkbook(TableauDocument):
         self.logger = logger_obj
         self.log(u'Initializing a TableauWorkbook object')
         self.twb_filename = twb_filename
+        self.xml = None
         # Check the filename
         if self.twb_filename.find('.twb') == -1:
             raise InvalidOptionException(u'Must input a .twb filename that exists')
