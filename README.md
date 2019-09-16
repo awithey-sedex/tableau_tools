@@ -236,6 +236,8 @@ tableau_tools 4.0+ implements the different versions of the Tableau Server REST 
 
 `TableauRestApiConnection32: 2018.3`
 
+`TableauRestApiConnection32: 2019.1`
+
 You need to initialize at least one object of this class. 
 Ex.:
 
