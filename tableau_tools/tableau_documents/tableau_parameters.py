@@ -9,6 +9,7 @@ import datetime
 import collections
 import re
 
+
 class TableauParameters(TableauDocument):
     def __init__(self, datasource_xml=None, logger_obj=None):
         """
