@@ -1,7 +1,7 @@
 from tableau_rest_api_connection_32 import *
 from url_filter import UrlFilter33
 
-class TableauRestApiConnection33(TableauRestApiConnection31):
+class TableauRestApiConnection33(TableauRestApiConnection32):
     def __init__(self, server, username, password, site_content_url=u""):
         """
         :type server: unicode
