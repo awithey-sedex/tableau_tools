@@ -135,8 +135,8 @@ class TableauRestApiConnection30(TableauRestApiConnection28):
 
         project_luid = project_obj.luid
         xml = self.publish_content(u'workbook', workbook_filename, workbook_name, project_luid,
-                                   {u"overwrite": overwrite, u"asJob": async_publish}, connection_credentials,
-                                   save_credentials, show_tabs=show_tabs,
+                                   {u"overwrite": overwrite, u"asJob": async_publish}, 
+                                   connection_credentials, save_credentials, show_tabs=show_tabs,
                                    check_published_ds=check_published_ds, oauth_flag=oauth_flag)
         if async_publish is True:
             job = xml.findall(u'.//t:job', self.ns_map)
