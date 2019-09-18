@@ -2378,9 +2378,8 @@ class TableauRestApiConnection(TableauBase):
         # If you need a temporary copy when fixing the published datasources
         temp_wb_filename = None
 
-        # Must be 'workbook' or 'datasource'
         if content_type not in [u'workbook', u'datasource', u'flow']:
-            raise InvalidOptionException(u"content_type must be 'workbook',  'datasource', or 'flow' ")
+            raise InvalidOptionException(u"content_type must be 'workbook', 'datasource', or 'flow' ")
 
         file_extension = None
         final_filename = None
@@ -2435,26 +2434,12 @@ class TableauRestApiConnection(TableauBase):
                         t1.set(u'generateThumbnailsAsUser', thumbnail_user_luid)
 
                     if connection_credentials is not None and len(connection_credentials) > 0:
-                        if len(connection_credentials) > 1:
-                            c1 = etree.Element(u'connections')
-                            for cred in connection_credentials:
-                                c = etree.Element(u'connection')
-                                c.set(u'serverAddress', cred[0])
-                                c.set(u'serverPort', str(cred[1]))
+                        c1 = etree.Element(u'connections')
+                        for cred in connection_credentials:
+                            c = etree.Element(u'connection')
+                            c.set(u'serverAddress', cred[0])
+                            c.set(u'serverPort', str(cred[1]))
 
-                                cc = etree.Element(u'connectionCredentials')
-                                cc.set(u'name', cred[2])
-                                if oauth_flag is True:
-                                    cc.set(u'oAuth', u"True")
-                                if cred[3] is not None:
-                                    cc.set(u'password', cred[3])
-                                cc.set(u'embed', str(save_credentials).lower())
-
-                                c.append(cc)
-                                c1.append(c)
-                            t1.append(c1)
-                        else:
-                            cred = connection_credentials[0]
                             cc = etree.Element(u'connectionCredentials')
                             cc.set(u'name', cred[2])
                             if oauth_flag is True:
@@ -2462,7 +2447,10 @@ class TableauRestApiConnection(TableauBase):
                             if cred[3] is not None:
                                 cc.set(u'password', cred[3])
                             cc.set(u'embed', str(save_credentials).lower())
-                            t1.append(cc)
+
+                            c.append(cc)
+                            c1.append(c)
+                        t1.append(c1)
 
                     # Views to Hide in Workbooks from 3.2
                     if views_to_hide_list is not None:
