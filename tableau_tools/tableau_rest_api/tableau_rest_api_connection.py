@@ -2366,6 +2366,16 @@ class TableauRestApiConnection(TableauBase):
         datasource = xml.findall(u'.//t:datasource', self.ns_map)
         return datasource[0].get('id')
 
+    def _create_connection_credentials(username, password, oauth_flag, save_credentials):
+        cc = etree.Element(u'connectionCredentials')
+        cc.set(u'name', str(username))
+        if oauth_flag is True:
+            cc.set(u'oAuth', u"True")
+        if password is not None:
+            cc.set(u'password', password)
+        cc.set(u'embed', str(save_credentials).lower())
+        return cc
+
     # Main method for publishing a workbook. Should intelligently decide to chunk up if necessary
     # If a TableauDatasource or TableauWorkbook is passed, will upload from its content
     def publish_content(self, content_type, content_filename, content_name, project_luid, url_params=None,
@@ -2434,23 +2444,22 @@ class TableauRestApiConnection(TableauBase):
                         t1.set(u'generateThumbnailsAsUser', thumbnail_user_luid)
 
                     if connection_credentials is not None and len(connection_credentials) > 0:
-                        c1 = etree.Element(u'connections')
-                        for cred in connection_credentials:
-                            c = etree.Element(u'connection')
-                            c.set(u'serverAddress', cred[0])
-                            c.set(u'serverPort', str(cred[1]))
-
-                            cc = etree.Element(u'connectionCredentials')
-                            cc.set(u'name', cred[2])
-                            if oauth_flag is True:
-                                cc.set(u'oAuth', u"True")
-                            if cred[3] is not None:
-                                cc.set(u'password', cred[3])
-                            cc.set(u'embed', str(save_credentials).lower())
-
-                            c.append(cc)
-                            c1.append(c)
-                        t1.append(c1)
+                        if content_type == 'datasource':
+                            cred = connection_credentials[0]
+                            cc = _create_connection_credentials(cred[2], cred[3], oauth_flag, save_credentials)
+                            t1.append(cc)
+                        else:
+                            c1 = etree.Element(u'connections')
+                            for cred in connection_credentials:
+                                c = etree.Element(u'connection')
+                                if cred[0] is not None:
+                                    c.set(u'serverAddress', cred[0])
+                                    if cred[1] is not None:
+                                        c.set(u'serverPort', str(cred[1]))
+                                cc = _create_connection_credentials(cred[2], cred[3], oauth_flag, save_credentials)
+                                c.append(cc)
+                                c1.append(c)
+                            t1.append(c1)
 
                     # Views to Hide in Workbooks from 3.2
                     if views_to_hide_list is not None:
