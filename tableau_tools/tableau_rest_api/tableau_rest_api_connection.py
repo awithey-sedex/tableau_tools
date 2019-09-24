@@ -2446,7 +2446,7 @@ class TableauRestApiConnection(TableauBase):
                     if connection_credentials is not None and len(connection_credentials) > 0:
                         if content_type == 'datasource':
                             cred = connection_credentials[0]
-                            cc = _create_connection_credentials(cred[2], cred[3], oauth_flag, save_credentials)
+                            cc = self._create_connection_credentials(cred[2], cred[3], oauth_flag, save_credentials)
                             t1.append(cc)
                         else:
                             c1 = etree.Element(u'connections')
@@ -2456,7 +2456,7 @@ class TableauRestApiConnection(TableauBase):
                                     c.set(u'serverAddress', cred[0])
                                     if cred[1] is not None:
                                         c.set(u'serverPort', str(cred[1]))
-                                cc = _create_connection_credentials(cred[2], cred[3], oauth_flag, save_credentials)
+                                cc = self._create_connection_credentials(cred[2], cred[3], oauth_flag, save_credentials)
                                 c.append(cc)
                                 c1.append(c)
                             t1.append(c1)
