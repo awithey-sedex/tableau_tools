@@ -2366,13 +2366,13 @@ class TableauRestApiConnection(TableauBase):
         datasource = xml.findall(u'.//t:datasource', self.ns_map)
         return datasource[0].get('id')
 
-    def _create_connection_credentials(username, password, oauth_flag, save_credentials):
+    def _create_connection_credentials(self, username, password, oauth_flag, save_credentials):
         cc = etree.Element(u'connectionCredentials')
         cc.set(u'name', str(username))
-        if oauth_flag is True:
-            cc.set(u'oAuth', u"True")
         if password is not None:
             cc.set(u'password', password)
+        if oauth_flag is True:
+            cc.set(u'oAuth', u"True")
         cc.set(u'embed', str(save_credentials).lower())
         return cc
 
